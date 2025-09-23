@@ -25,7 +25,7 @@ class MF(object):
         # number of users, items and ratings. Add more one since id starts from 0
         self.n = int(np.max(Y_data[:, 0])) + 1
         self.m = int(np.max(Y_data[:, 1])) + 1
-        self.n_ratings = Y_data.shape[0]
+        self.total_of_ratings = Y_data.shape[0]
         # X has size (KxM) => K is optional number and smaller than M
         # X is Item features
         if Xinit == None:
@@ -56,13 +56,68 @@ class MF(object):
             item_cols = 0
             n_objects = self.m
 
-    def loss(self):
+    def loss_function(self):
+        """
+        formula = r"L(W) = (1/(2*s)) * Σ_{n=1}^{N} Σ_{m: r_{mn}=1} (y_{mn} - x_m w_n)^2 + (λ/2) * ||W||_F^2"
+        """
         loss_value = 0
-        for i in range(self.n_ratings):
+        for i in range(self.total_of_ratings):
             # user
-            n = int(self.Y_normalized[i, 0])
-            m = int(self.Y_normalized[i, 1])
-            rate = int(self.Y_normalized[i, 2])
+            user_id = int(self.Y_normalized[i, 0])
+            item_id = int(self.Y_normalized[i, 1])
+            rate_number = int(self.Y_normalized[i, 2])
+            loss_value += (rate_number - np.dot(self.X[item_id, :], self.W[:, user_id]))**2
+        
+        loss_value /= (2 * self.total_of_ratings) # 1/(2*s)
+
+        #Chosen norm: 'fro'  Frobenius norm  
+        loss_value += self.lamb * (np.linalg.norm(self.X, 'fro') + np.linalg.norm(self.W, 'fro'))
+
+        return loss_value
+
+    def get_items_rated_by_user(self, user_id):
+        users_idx = np.where(self.Y_data[:, 0] == user_id)[0]
+        item_ids = self.Y_data[users_idx, 1].astype(np.int32)
+        ratings = self.Y_data[users_idx, 2].astype(np.int32)
+        return (item_ids, ratings)
+    
+    def get_users_who_rate_item(self, item_id):
+        item_idx = np.where(self.Y_data[:, 1] == item_id)[0]
+        user_ids = self.Y_data[item_idx, 0].astype(np.int32)
+        ratings = self.Y_data[item_idx, 2].as_type(np.int32)
+        return (user_ids, ratings)
+    
+
+    def updateX(self):
+        """
+        x_m = x_m - η * ( - (1/s) * (y_m - x_m * W_m) * W_m^T + λ * x_m )
+        """
+        for item in range(self.m):
+            user_ids, ratings = self.get_users_who_rate_item(item)
+            W_m = self.W[:, user_ids] # size (K, n*)
+            X_m = self.X[item, :] # size (1, K)
+            # ratings = size (n*, 1)
+            grad = (np.dot((ratings.T - np.dot(X_m, W_m)), W_m.T) + (self.lamb * X_m)) * (-(1/self.total_of_ratings)) 
+            X_m -= self.learning_rate * grad
+            self.X[item, :] = X_m
+            #self.X[m, :] -= self.learning_rate* => grad_xm.reshape((self.K,))
+
+    def updateW(self):
+        """
+        w_n = w_n - η * ( - (1/s) * X_n^T * (y_n - X_n * w_n) + λ * w_n )
+        """
+        for user in range (self.n):
+            item_ids, ratings = self.get_items_rated_by_user(user)
+            W_n = self.W[:, user] # size (K, 1)
+            X_n = self.X[item_ids, :] # size (m*, K)
+            # ratings = size (m*, 1)
+            grad = (np.dot((ratings - np.dot(X_n, W_n)), W_n.T) + (self.lamb * W_n)) * (-(1/self.total_of_ratings))
+            W_n -= self.learning_rate * grad
+            self.W[:, user] = W_n
+
+
+            
+    
 
 
 
