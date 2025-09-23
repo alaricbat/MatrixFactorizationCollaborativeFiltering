@@ -43,7 +43,7 @@ class MF(object):
         else:
             self.W = Winit
         # normalized data, update later in normaized_Y function
-        self.Y_data_n = self.Y_data.copy()
+        self.Y_normalized = self.Y_data.copy()
 
     def normalize_Y(self):
 
@@ -55,6 +55,17 @@ class MF(object):
             user_cols = 1
             item_cols = 0
             n_objects = self.m
+
+    def loss(self):
+        loss_value = 0
+        for i in range(self.n_ratings):
+            # user
+            n = int(self.Y_normalized[i, 0])
+            m = int(self.Y_normalized[i, 1])
+            rate = int(self.Y_normalized[i, 2])
+
+
+
         
 
     
