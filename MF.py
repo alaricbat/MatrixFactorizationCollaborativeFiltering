@@ -98,7 +98,7 @@ class MF(object):
             X_m = self.X[item, :] # size (1, K)
             # ratings = size (n*, 1)
             grad = (np.dot((ratings.T - np.dot(X_m, W_m)), W_m.T) + (self.lamb * X_m)) * (-(1/self.total_of_ratings)) 
-            X_m -= self.learning_rate * grad
+            X_m -= self.learning_rate * grad.reshape((self.K,))
             self.X[item, :] = X_m
             #self.X[m, :] -= self.learning_rate* => grad_xm.reshape((self.K,))
 
@@ -111,9 +111,11 @@ class MF(object):
             W_n = self.W[:, user] # size (K, 1)
             X_n = self.X[item_ids, :] # size (m*, K)
             # ratings = size (m*, 1)
-            grad = (np.dot((ratings - np.dot(X_n, W_n)), W_n.T) + (self.lamb * W_n)) * (-(1/self.total_of_ratings))
-            W_n -= self.learning_rate * grad
+            grad = (np.dot((ratings - np.dot(X_n, W_n)).T, X_n).T + (self.lamb * W_n)) * (-(1/self.total_of_ratings))
+            W_n -= self.learning_rate * grad.reshape((self.K,))
             self.W[:, user] = W_n
+
+    
 
 
             
