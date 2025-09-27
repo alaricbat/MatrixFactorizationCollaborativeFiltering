@@ -45,7 +45,7 @@ class MF(object):
         # normalized data, update later in normaized_Y function
         self.Y_normalized = self.Y_data.copy()
 
-    def normalize_Y(self):
+    def __normalize_Y(self):
 
         if self.user_based == True:
             user_cols = 0
@@ -55,6 +55,27 @@ class MF(object):
             user_cols = 1
             item_cols = 0
             n_objects = self.m
+        
+        users = self.Y_data[:, user_cols]
+        self.mu = np.zeros((n_objects,))
+        
+        for i in range (n_objects):
+            # row indices of rating done by user n
+            # since indices need to be integers, we need to convert
+            user_ids = np.where(users == i)[0].astype(np.int32)
+            # indicates of all ratings associated with user n
+            item_ids = self.Y_data[user_ids, item_cols]
+            # corresponding ratings
+            ratings = self.Y_data[user_ids, 2]
+            mean_rating = np.mean(ratings)
+            if np.isnan(mean_rating):
+                m = 0 # to avoid empty array and nan value
+            self.mu[i] = mean_rating
+            # normalize
+            self.Y_data[user_ids, 2] = ratings - self.mu[i]
+
+            pass
+
 
     def loss_function(self):
         """
@@ -115,8 +136,13 @@ class MF(object):
             W_n -= self.learning_rate * grad.reshape((self.K,))
             self.W[:, user] = W_n
 
-    
+    def fit(self):
+        self.__normalize_Y()
+        for iter in range(self.max_iter):
+            self.updateW()
+            self.updateX()
 
+    
 
             
     
