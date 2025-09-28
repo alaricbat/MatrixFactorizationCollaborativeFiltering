@@ -57,24 +57,30 @@ class MF(object):
             n_objects = self.m
         
         users = self.Y_data[:, user_cols]
+        items = self.Y_data[:, item_cols]
         self.mu = np.zeros((n_objects,))
         
         for i in range (n_objects):
             # row indices of rating done by user n
             # since indices need to be integers, we need to convert
-            user_ids = np.where(users == i)[0].astype(np.int32)
-            # indicates of all ratings associated with user n
-            item_ids = self.Y_data[user_ids, item_cols]
-            # corresponding ratings
-            ratings = self.Y_data[user_ids, 2]
-            mean_rating = np.mean(ratings)
-            if np.isnan(mean_rating):
-                m = 0 # to avoid empty array and nan value
-            self.mu[i] = mean_rating
-            # normalize
-            self.Y_data[user_ids, 2] = ratings - self.mu[i]
-
-            pass
+            if self.user_based == True:
+                user_ids = np.where(users == i)[0].astype(np.int32)
+                # corresponding ratings
+                ratings = self.Y_data[user_ids, 2]
+                mean_rating = np.mean(ratings)
+                if np.isnan(mean_rating):
+                    mean_rating = 0 # to avoid empty array and nan value
+                self.mu[i] = mean_rating
+                # normalize
+                self.Y_data[user_ids, 2] = ratings - self.mu[i]
+            else:
+                item_ids = np.where(items == i)[0].astype(np.int32)
+                ratings = self.Y_data(item_ids, 2)
+                mean_rating = np.mean(ratings)
+                if np.isnan(mean_rating):
+                    mean_rating = 0
+                self.mu[i] = mean_rating
+                self.Y_data[item_ids, 2] = ratings - self.mu[i]
 
 
     def loss_function(self):
@@ -141,8 +147,45 @@ class MF(object):
         for iter in range(self.max_iter):
             self.updateW()
             self.updateX()
+            if (iter + 1) % self.print_every == 0:
+                rmse_train = self.evaluate_RMSE(self.Y_raw_data)
+                print('iter =', iter + 1, ', loss =', self.loss_function(), ', RMSE train =', rmse_train)
 
+    def pre(self, u, i):
+        u = int(u)
+        i = int(i)
+        if self.user_based == True:
+            bias = self.mu[u]
+        else:
+            bias = self.mu[i]
+        y_pred = np.dot(self.X[i, :], self.W[:, u]) + bias
+
+        if y_pred < 0:
+            return 0
+        if y_pred > 5:
+            return 5
+        return y_pred
     
+    def pred_for_user(self, user_id):
+        user_idx = np.where(self.Y_data[:, 0] == user_id)[0]
+        items_rated_by_user = self.Y_data[user_idx, 1].to_list()
+        y_pred = np.dot(self.X, self.W[:, user_id]) + self.mu[user_id]
+        predicted_rating = []
+        for i in range(self.m):
+            if i not in items_rated_by_user:
+                predicted_rating.append((i, y_pred[i]))
+        return predicted_rating
+
+    def evaluate_RMSE(self, rate_test):
+            n_tests = rate_test.shape[0]
+            SE = 0 # squared error
+            for n in range(n_tests):
+                pred = self.pred(rate_test[n, 0], rate_test[n, 1])
+                SE += (pred - rate_test[n, 2])**2 
+
+            RMSE = np.sqrt(SE/n_tests)
+            return RMSE
+        
 
             
     
