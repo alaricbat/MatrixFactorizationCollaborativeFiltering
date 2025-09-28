@@ -104,14 +104,14 @@ class MF(object):
 
     def get_items_rated_by_user(self, user_id):
         users_idx = np.where(self.Y_data[:, 0] == user_id)[0]
-        item_ids = self.Y_data[users_idx, 1].astype(np.int32)
-        ratings = self.Y_data[users_idx, 2].astype(np.int32)
+        item_ids = np.array(self.Y_data[users_idx, 1], dtype=np.int32)
+        ratings = np.array(self.Y_data[users_idx, 2], dtype=np.int32)
         return (item_ids, ratings)
     
     def get_users_who_rate_item(self, item_id):
         item_idx = np.where(self.Y_data[:, 1] == item_id)[0]
-        user_ids = self.Y_data[item_idx, 0].astype(np.int32)
-        ratings = self.Y_data[item_idx, 2].as_type(np.int32)
+        user_ids = np.array(self.Y_data[item_idx, 0], dtype=np.int32)
+        ratings = np.array(self.Y_data[item_idx, 2], dtype=np.int32)
         return (user_ids, ratings)
     
 
@@ -147,11 +147,11 @@ class MF(object):
         for iter in range(self.max_iter):
             self.updateW()
             self.updateX()
-            if (iter + 1) % self.print_every == 0:
-                rmse_train = self.evaluate_RMSE(self.Y_raw_data)
+            if (iter + 1) % 100 == 0:
+                rmse_train = self.evaluate_RMSE(self.Y_data)
                 print('iter =', iter + 1, ', loss =', self.loss_function(), ', RMSE train =', rmse_train)
 
-    def pre(self, u, i):
+    def pred(self, u, i):
         u = int(u)
         i = int(i)
         if self.user_based == True:
